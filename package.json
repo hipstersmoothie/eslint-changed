@@ -1,0 +1,24 @@
+{
+  "name": "eslint-changed",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "eslint-changed": "node -r esbuild-register src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/minimatch": "^3.0.5",
+    "esbuild": "^0.13.3",
+    "esbuild-register": "^3.0.0",
+    "typescript": "^4.4.3"
+  },
+  "dependencies": {
+    "command-line-application": "^0.10.1",
+    "endent": "^2.1.0",
+    "minimatch": "^3.0.4"
+  }
+}
