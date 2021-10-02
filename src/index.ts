@@ -85,7 +85,6 @@ async function eslintChanged(options?: EslintChangedOptions) {
   let changedFiles: string[] = [];
 
   // Only interact with GitHub in CI
-  console.log(process.env.CI, github);
   if (process.env.CI && github) {
     if (!process.env.GITHUB_TOKEN) {
       console.log(
@@ -113,7 +112,7 @@ async function eslintChanged(options?: EslintChangedOptions) {
           commit_sha: process.env.GITHUB_SHA!,
         });
 
-      number = matchedPrs[0]?.number;
+      number = matchedPrs.filter((pr) => pr.state === "open")[0]?.number;
     }
 
     // Return list of files if there is a PR
