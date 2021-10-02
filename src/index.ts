@@ -6,7 +6,7 @@ import minimatch from "minimatch";
 import { Octokit } from "@octokit/rest";
 import * as githubActions from "@actions/github";
 
-export const eslidntChangedCommand: Command = {
+export const eslintChangedCommand: Command = {
   name: "eslint-changed",
   description: endent`
     Run eslint on as few files as possible. 
@@ -69,6 +69,8 @@ export const eslidntChangedCommand: Command = {
   ],
 };
 
+const noFiles = ["package.json"];
+
 interface EslintChangedOptions {
   diff: string;
   files: string;
@@ -79,15 +81,10 @@ export async function eslintChanged(
   options?: EslintChangedOptions
 ): Promise<string[]> {
   if (!options) {
-    return [];
+    return noFiles;
   }
 
   const { files, diff, github } = options;
-  const { stdout } = await execa("git", ["diff", "--name-only", diff]);
-
-  if (stdout.includes(".eslint")) {
-    return [files];
-  }
 
   let changedFiles: string[] = [];
 
@@ -111,12 +108,12 @@ export async function eslintChanged(
     const { owner, repo } = githubActions.context.repo;
     let { number } = githubActions.context.issue;
 
-    if (!number) {
+    if (!number && process.env.GITHUB_SHA) {
       const { data: matchedPrs } =
         await octokit.rest.repos.listPullRequestsAssociatedWithCommit({
           owner,
           repo,
-          commit_sha: process.env.GITHUB_SHA!,
+          commit_sha: process.env.GITHUB_SHA,
         });
 
       number = matchedPrs.filter((pr) => pr.state === "open")[0]?.number;
@@ -129,6 +126,11 @@ export async function eslintChanged(
         repo,
         pull_number: number,
       });
+
+      // If eslintrc is changed run full lint
+      if (filesInPr.some((file) => file.filename.includes(".eslint"))) {
+        return [files];
+      }
 
       changedFiles = filesInPr.map((file) => file.filename);
     }
@@ -145,6 +147,13 @@ export async function eslintChanged(
       }
     }
   } else if (diff) {
+    const { stdout } = await execa("git", ["diff", "--name-only", diff]);
+
+    // Run full lint if config changes
+    if (stdout.includes(".eslint")) {
+      return [files];
+    }
+
     changedFiles = stdout.split("\n");
   }
 
@@ -152,5 +161,5 @@ export async function eslintChanged(
     minimatch.filter(files, { dot: true, matchBase: true })
   );
 
-  return includedFiles;
+  return includedFiles.length === 0 ? noFiles : includedFiles;
 }

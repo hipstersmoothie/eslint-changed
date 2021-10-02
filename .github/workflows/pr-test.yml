@@ -29,6 +29,8 @@ jobs:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
           SKIP_DOWNLOAD_MEDIA_ENGINE: true
 
-      - run: yarn eslint-changed "src/**/*" --github main
+      - run: yarn build
+
+      - run: yarn eslint `./bin/eslint-changed.js "src/**/*" --github main`
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
