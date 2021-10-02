@@ -134,8 +134,6 @@ async function eslintChanged(options?: EslintChangedOptions) {
         (branch) => branch === currentBranch
       );
 
-      console.log("ref", { currentBranch });
-
       if (inFullLintBranch) {
         return [files];
       }
