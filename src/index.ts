@@ -1,4 +1,4 @@
-import { app, Command } from "command-line-application";
+import { Command } from "command-line-application";
 import endent from "endent";
 import execa from "execa";
 import chalk from "chalk";
@@ -6,7 +6,7 @@ import minimatch from "minimatch";
 import { Octokit } from "@octokit/rest";
 import * as githubActions from "@actions/github";
 
-const eslintChangedCommand: Command = {
+export const eslidntChangedCommand: Command = {
   name: "eslint-changed",
   description: endent`
     Run eslint on as few files as possible. 
@@ -75,12 +75,19 @@ interface EslintChangedOptions {
   github?: string[];
 }
 
-async function eslintChanged(options?: EslintChangedOptions) {
+export async function eslintChanged(
+  options?: EslintChangedOptions
+): Promise<string[]> {
   if (!options) {
-    return;
+    return [];
   }
 
   const { files, diff, github } = options;
+  const { stdout } = await execa("git", ["diff", "--name-only", diff]);
+
+  if (stdout.includes(".eslint")) {
+    return [files];
+  }
 
   let changedFiles: string[] = [];
 
@@ -138,8 +145,6 @@ async function eslintChanged(options?: EslintChangedOptions) {
       }
     }
   } else if (diff) {
-    const { stdout } = await execa("git", ["diff", "--name-only", diff]);
-
     changedFiles = stdout.split("\n");
   }
 
@@ -149,13 +154,3 @@ async function eslintChanged(options?: EslintChangedOptions) {
 
   return includedFiles;
 }
-
-eslintChanged(app(eslintChangedCommand) as EslintChangedOptions).then(
-  (files) => {
-    if (!files) {
-      return;
-    }
-
-    console.log(files.join(" "));
-  }
-);
