@@ -60,6 +60,7 @@ export const eslintChangedCommand: Command = {
     {
       name: "github",
       type: String,
+      typeLabel: 'true | string[]',
       multiple: true,
       description: endent`
         Only lint files changed in a PR. Optionally provide list of branches to run 

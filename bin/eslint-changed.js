@@ -3,6 +3,10 @@
 const { app } = require("command-line-application");
 const { eslintChanged, eslintChangedCommand } = require("../dist");
 
-eslintChanged(app(eslintChangedCommand)).then((files) => {
-  console.log(files.join(" "));
-});
+const args = app(eslintChangedCommand);
+
+if (args) {
+  eslintChanged(args).then((files) => {
+    console.log(files.join(" "));
+  });
+}
