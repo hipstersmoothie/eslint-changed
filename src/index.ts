@@ -1,4 +1,4 @@
-import { app, Command } from "command-line-application";
+import { Command } from "command-line-application";
 import endent from "endent";
 import execa from "execa";
 import chalk from "chalk";
@@ -6,7 +6,7 @@ import minimatch from "minimatch";
 import { Octokit } from "@octokit/rest";
 import * as githubActions from "@actions/github";
 
-const eslintChangedCommand: Command = {
+export const eslintChangedCommand: Command = {
   name: "eslint-changed",
   description: endent`
     Run eslint on as few files as possible. 
@@ -69,15 +69,19 @@ const eslintChangedCommand: Command = {
   ],
 };
 
+const noFiles = ["package.json"];
+
 interface EslintChangedOptions {
   diff: string;
   files: string;
   github?: string[];
 }
 
-async function eslintChanged(options?: EslintChangedOptions) {
+export async function eslintChanged(
+  options?: EslintChangedOptions
+): Promise<string[]> {
   if (!options) {
-    return;
+    return noFiles;
   }
 
   const { files, diff, github } = options;
@@ -104,12 +108,12 @@ async function eslintChanged(options?: EslintChangedOptions) {
     const { owner, repo } = githubActions.context.repo;
     let { number } = githubActions.context.issue;
 
-    if (!number) {
+    if (!number && process.env.GITHUB_SHA) {
       const { data: matchedPrs } =
         await octokit.rest.repos.listPullRequestsAssociatedWithCommit({
           owner,
           repo,
-          commit_sha: process.env.GITHUB_SHA!,
+          commit_sha: process.env.GITHUB_SHA,
         });
 
       number = matchedPrs.filter((pr) => pr.state === "open")[0]?.number;
@@ -122,6 +126,11 @@ async function eslintChanged(options?: EslintChangedOptions) {
         repo,
         pull_number: number,
       });
+
+      // If eslintrc is changed run full lint
+      if (filesInPr.some((file) => file.filename.includes(".eslint"))) {
+        return [files];
+      }
 
       changedFiles = filesInPr.map((file) => file.filename);
     }
@@ -140,6 +149,11 @@ async function eslintChanged(options?: EslintChangedOptions) {
   } else if (diff) {
     const { stdout } = await execa("git", ["diff", "--name-only", diff]);
 
+    // Run full lint if config changes
+    if (stdout.includes(".eslint")) {
+      return [files];
+    }
+
     changedFiles = stdout.split("\n");
   }
 
@@ -147,15 +161,5 @@ async function eslintChanged(options?: EslintChangedOptions) {
     minimatch.filter(files, { dot: true, matchBase: true })
   );
 
-  return includedFiles;
+  return includedFiles.length === 0 ? noFiles : includedFiles;
 }
-
-eslintChanged(app(eslintChangedCommand) as EslintChangedOptions).then(
-  (files) => {
-    if (!files) {
-      return;
-    }
-
-    console.log(files.join(" "));
-  }
-);
